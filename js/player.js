@@ -1659,3 +1659,47 @@ async function switchToResource(sourceKey, vodId) {
         hideLoading();
     }
 }
+
+// 初始化 Chromecast
+window['__onGCastApiAvailable'] = function (isAvailable) {
+    if (isAvailable) {
+        cast.framework.CastContext.getInstance().setOptions({
+            receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+            autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+        });
+    }
+};
+
+// 投屏播放当前视频 URL
+function castToChromecast(videoUrl) {
+    const mediaInfo = new chrome.cast.media.MediaInfo(videoUrl, 'application/x-mpegURL');
+    mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
+    mediaInfo.metadata.title = document.title || 'LibreTV 视频';
+
+    const request = new chrome.cast.media.LoadRequest(mediaInfo);
+    const session = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (session) {
+        session.loadMedia(request).then(() => {
+            showToast('已开始投屏');
+        }).catch((err) => {
+            console.error('投屏失败:', err);
+            showToast('投屏失败', 'error');
+        });
+    } else {
+        showToast('没有检测到可用的投屏设备', 'error');
+    }
+}
+
+// 绑定按钮点击事件
+document.addEventListener('DOMContentLoaded', () => {
+    const castButton = document.getElementById('castButton');
+    if (castButton) {
+        castButton.addEventListener('click', () => {
+            if (art && art.url) {
+                castToChromecast(art.url);
+            } else {
+                showToast('当前无播放内容', 'error');
+            }
+        });
+    }
+});
